@@ -1,0 +1,10 @@
++-----------+            +-----------+
+|  Persona  |1        *  |   Auto    |
++-----------+------------+-----------+
+| NroDni    |            | Patente   |
+| Apellido  |            | Marca     |
+| Nombre    |            | Modelo    |
+| fechaNac  |            | DniDuenio |
+| Telefono  |            +-----------+
+| Domicilio |
++-----------+
