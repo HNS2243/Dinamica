@@ -1,3 +1,5 @@
+<?php
+namespace BaseDeDatos;
 class Persona
 {
     private string $nroDni;

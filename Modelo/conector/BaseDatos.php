@@ -1,7 +1,7 @@
 <?php
 class BaseDatos extends PDO {
     private $engine, $host, $database, $user, $pass;
-    private $debug, $conec, $indice, $resultado, $error, $sql;
+    private $debug, $conec, $indice, $resultado, $error, $sql, $constructorError;
 
     public function __construct(){
         $this->engine = 'mysql';
@@ -10,16 +10,28 @@ class BaseDatos extends PDO {
         $this->user = 'root';
         $this->pass = '';
         $this->debug = true;
-        $this->error = "";
-        $this->sql = "";
+    $this->error = "";
+    $this->sql = "";
+    $this->constructorError = "";
         $this->indice = 0;
 
         $dns = "{$this->engine}:dbname={$this->database};host={$this->host}";
         try {
-            parent::__construct($dns, $this->user, $this->pass, [PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8']);
+            // Only use PDO MySQL specific constants if they're defined (pdo_mysql driver enabled)
+            $options = null;
+            if (defined('PDO::MYSQL_ATTR_INIT_COMMAND')) {
+                $options = [PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'];
+            }
+            if ($options !== null) {
+                parent::__construct($dns, $this->user, $this->pass, $options);
+            } else {
+                // Call parent without driver-specific options
+                parent::__construct($dns, $this->user, $this->pass);
+            }
             $this->conec = true;
         } catch (PDOException $e) {
-            $this->sql = $e->getMessage();
+            // Store constructor failure message separately so it isn't overwritten by later queries
+            $this->constructorError = $e->getMessage();
             $this->conec = false;
         }
     }
@@ -40,6 +52,11 @@ class BaseDatos extends PDO {
     }
 
     private function EjecutarInsert($sql){
+        if (!$this->conec) {
+            $this->error = "No se pudo conectar a la base de datos. Constructor PDO fallido: " . $this->constructorError;
+            if ($this->debug) echo "<pre>ERROR: " . $this->error . "</pre>";
+            return -1;
+        }
         $res = parent::query($sql);
         if(!$res){
             $this->analizarDebug();
@@ -50,12 +67,22 @@ class BaseDatos extends PDO {
     }
 
     private function EjecutarDeleteUpdate($sql){
+        if (!$this->conec) {
+            $this->error = "No se pudo conectar a la base de datos. Constructor PDO fallido: " . $this->constructorError;
+            if ($this->debug) echo "<pre>ERROR: " . $this->error . "</pre>";
+            return -1;
+        }
         $res = parent::query($sql);
         if(!$res){ $this->analizarDebug(); return -1; }
         return $res->rowCount();
     }
 
     private function EjecutarSelect($sql){
+        if (!$this->conec) {
+            $this->error = "No se pudo conectar a la base de datos. Constructor PDO fallido: " . $this->constructorError;
+            if ($this->debug) echo "<pre>ERROR: " . $this->error . "</pre>";
+            return -1;
+        }
         $res = parent::query($sql);
         if(!$res){ $this->analizarDebug(); return -1; }
         $this->resultado = $res->fetchAll(PDO::FETCH_ASSOC);
@@ -69,13 +96,39 @@ class BaseDatos extends PDO {
         $this->indice++;
         return $fila;
     }
-
     private function analizarDebug(){
-        $e = $this->errorInfo();
-        $this->error = print_r($e,true);
-        if($this->debug){
-            echo "<pre>"; print_r($e); echo "</pre>";
+        // If constructor failed to create PDO, errorInfo() will not be available; guard against that.
+        if (!$this->conec) {
+            // Use $this->sql to store constructor error message when connection failed.
+            $this->error = "Objeto PDO no inicializado. Detalle: " . $this->sql;
+            if ($this->debug) { echo "<pre>" . $this->error . "</pre>"; }
+            return;
         }
+        
+        // PDO is available: fetch driver error info.
+        
+        $e = $this->errorInfo();
+        
+        $this->error = print_r($e, true);
+        
+        if ($this->debug) { echo "<pre>"; print_r($e); echo "</pre>"; }
+
     }
+
+    // Public getters to retrieve errors without using Reflection
+    public function getConstructorError(){
+        return $this->constructorError;
+    }
+
+    public function getLastError(){
+        return $this->error;
+    }
+
+    public function getDebug(){
+        return $this->debug;
+    }
+
 }
+
 ?>
+

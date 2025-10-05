@@ -8,6 +8,22 @@ class AbmAuto {
     }
 
     /**
+     * Alta de un nuevo auto a partir de un array de datos
+     * @param array $datos expects keys Patente, Marca, Modelo, DniDuenio
+     * @return bool
+     */
+    public function altaAuto($datos) {
+        require_once __DIR__ . '/../Modelo/Auto.php';
+        $auto = new Auto();
+        $auto->setPatente($datos['Patente']);
+        $auto->setMarca($datos['Marca']);
+        $auto->setModelo($datos['Modelo']);
+        $auto->setDniDuenio($datos['DniDuenio']);
+        $res = $auto->insertar();
+        return ($res > 0);
+    }
+
+    /**
      * Busca un auto por su patente
      * @param string $patente
      * @return Auto|false

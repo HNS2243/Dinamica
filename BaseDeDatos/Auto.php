@@ -1,3 +1,5 @@
+<?php
+namespace BaseDeDatos;
 class Auto
 {
     private string $patente;
